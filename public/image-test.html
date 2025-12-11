@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-form {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .upload-form input[type="file"] {
+            margin: 10px 0;
+        }
+        .upload-form button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .image-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+        .image-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .image-item button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Upload & Management</h1>
+    
+    <div class="upload-form">
+        <h3>Upload New Image</h3>
+        <input type="file" id="imageFile" accept="image/*" />
+        <br>
+        <button onclick="uploadImage()">Upload Image</button>
+        <div id="uploadStatus"></div>
+    </div>
+    
+    <div>
+        <h3>Uploaded Images</h3>
+        <button onclick="loadImages()">Refresh Images</button>
+        <div id="imageGrid" class="image-grid"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3005/api/images';
+
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageFile');
+            const statusDiv = document.getElementById('uploadStatus');
+            
+            if (!fileInput.files[0]) {
+                showStatus('Please select an image file', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            try {
+                statusDiv.innerHTML = 'Uploading...';
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus('Image uploaded successfully!', 'success');
+                    fileInput.value = '';
+                    loadImages(); // Refresh the image list
+                } else {
+                    showStatus(`Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadImages() {
+            try {
+                const response = await fetch(API_BASE);
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayImages(result.data);
+                } else {
+                    showStatus(`Error loading images: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Error loading images: ${error.message}`, 'error');
+            }
+        }
+
+        function displayImages(images) {
+            const imageGrid = document.getElementById('imageGrid');
+            
+            if (images.length === 0) {
+                imageGrid.innerHTML = '<p>No images uploaded yet.</p>';
+                return;
+            }
+
+            imageGrid.innerHTML = images.map(image => `
+                <div class="image-item">
+                    <img src="${API_BASE}/${image.filename}" alt="${image.original_name}" />
+                    <p><strong>${image.original_name}</strong></p>
+                    <p>Size: ${formatFileSize(image.size)}</p>
+                    <p>Type: ${image.mime_type}</p>
+                    <p>Uploaded: ${new Date(image.created_at).toLocaleDateString()}</p>
+                    <button onclick="deleteImage('${image.id}')">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteImage(imageId) {
+            if (!confirm('Are you sure you want to delete this image?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/${imageId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus('Image deleted successfully!', 'success');
+                    loadImages(); // Refresh the image list
+                } else {
+                    showStatus(`Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            // Clear status after 5 seconds
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Load images when page loads
+        window.onload = loadImages;
+    </script>
+</body>
+</html>
