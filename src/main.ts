@@ -13,12 +13,24 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Enable CORS with credentials for cookies
-  app.enableCors({
-    origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
+  const allowedOrigins = [
+    'http://localhost:3000',
     'https://fe-phutraco.vercel.app',
-    'https://phutraco.icss.com.vn'
-  ],
+    'https://phutraco.icss.com.vn',
+  ];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(
+        new Error('Not allowed by CORS - origin: ' + origin),
+        false,
+      );
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
