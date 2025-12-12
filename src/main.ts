@@ -14,7 +14,11 @@ async function bootstrap() {
 
   // Enable CORS with credentials for cookies
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'https://fe-phutraco.vercel.app',
+    'https://phutraco.icss.com.vn'
+  ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
