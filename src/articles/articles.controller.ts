@@ -31,7 +31,7 @@ export interface UpdateArticleDto {
   status?: string;
 }
 
-@Controller('api/articles')
+@Controller('/articles')
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 

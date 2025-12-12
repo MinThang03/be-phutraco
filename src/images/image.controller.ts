@@ -15,7 +15,7 @@ import { Response } from 'express';
 import { ImageService } from './image.service';
 import { Image } from './image.entity';
 
-@Controller('api/images')
+@Controller('/images')
 export class ImageController {
   constructor(private readonly imageService: ImageService) {}
 
