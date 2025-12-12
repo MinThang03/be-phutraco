@@ -58,7 +58,7 @@ export class ImageService {
         mime_type: file.mimetype,
         size: file.size,
         path: filePath,
-        url: `/api/images/${filename}`,
+        url: `/images/${filename}`,
       });
 
       return await this.imageRepository.save(image);
