@@ -22,14 +22,12 @@ export class AuthController {
   ) {}
 
   private getCookieOptions(maxAge?: number) {
-    const isProduction = this.configService.get('NODE_ENV') === 'production';
     return {
       httpOnly: true,
-      secure: isProduction, // Must be true for sameSite: 'none'
-      sameSite: isProduction ? ('none' as const) : ('lax' as const), // 'none' for cross-domain
+      secure: this.configService.get('NODE_ENV') === 'production',
+      sameSite: 'strict' as const,
       maxAge: maxAge || 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/',
-      // domain: isProduction ? '.icss.com.vn' : undefined, // Uncomment if using subdomain
     };
   }
 
