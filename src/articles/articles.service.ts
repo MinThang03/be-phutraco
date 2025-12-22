@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Article } from './articles.entity';
+import { ArticleEn } from './articles-en.entity';
 import { CreateArticleDto, UpdateArticleDto } from './articles.controller';
 
 @Injectable()
@@ -13,6 +14,8 @@ export class ArticleService {
   constructor(
     @InjectRepository(Article)
     private readonly articleRepository: Repository<Article>,
+    @InjectRepository(ArticleEn)
+    private readonly articleEnRepository: Repository<ArticleEn>,
   ) {}
 
   private generateSlug(title: string): string {
@@ -282,5 +285,120 @@ export class ArticleService {
   async deleteArticle(id: string): Promise<void> {
     const article = await this.getArticleById(id);
     await this.articleRepository.delete(id);
+  }
+
+  // English articles methods
+  async createArticleEn(createArticleDto: CreateArticleDto): Promise<ArticleEn> {
+    const {
+      title,
+      excerpt,
+      content,
+      thumbnail_url,
+      author_id,
+      status = 'draft',
+    } = createArticleDto;
+
+    let slug = this.generateSlug(title);
+
+    // Ensure slug is unique
+    let counter = 1;
+    const baseSlug = slug;
+    while (await this.articleEnRepository.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    const article = this.articleEnRepository.create({
+      title,
+      slug,
+      excerpt,
+      content,
+      thumbnail_url,
+      author_id,
+      status,
+    });
+
+    return await this.articleEnRepository.save(article);
+  }
+
+  async getArticleEnById(id: string): Promise<ArticleEn> {
+    const article = await this.articleEnRepository.findOne({ where: { id } });
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+    return article;
+  }
+
+  async getArticleEnBySlug(slug: string): Promise<ArticleEn> {
+    const article = await this.articleEnRepository.findOne({ where: { slug } });
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+    return article;
+  }
+
+  async getAllArticlesEn(
+    page: number = 1,
+    limit: number = 10,
+    status?: string,
+  ): Promise<{ data: ArticleEn[]; total: number; page: number; limit: number }> {
+    const queryBuilder = this.articleEnRepository.createQueryBuilder('article');
+
+    if (status) {
+      queryBuilder.where('article.status = :status', { status });
+    }
+
+    const [data, total] = await queryBuilder
+      .orderBy('article.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async updateArticleEn(
+    id: string,
+    updateArticleDto: UpdateArticleDto,
+  ): Promise<ArticleEn> {
+    const article = await this.getArticleEnById(id);
+
+    if (updateArticleDto.title && updateArticleDto.title !== article.title) {
+      let slug = this.generateSlug(updateArticleDto.title);
+
+      // Ensure slug is unique (excluding current article)
+      let counter = 1;
+      const baseSlug = slug;
+      while (
+        await this.articleEnRepository.findOne({
+          where: { slug },
+        })
+      ) {
+        const existingArticle = await this.articleEnRepository.findOne({
+          where: { slug },
+        });
+        if (existingArticle && existingArticle.id !== id) {
+          slug = `${baseSlug}-${counter}`;
+          counter++;
+        } else {
+          break;
+        }
+      }
+
+      article.slug = slug;
+    }
+
+    Object.assign(article, updateArticleDto);
+    return await this.articleEnRepository.save(article);
+  }
+
+  async deleteArticleEn(id: string): Promise<void> {
+    const article = await this.getArticleEnById(id);
+    await this.articleEnRepository.delete(id);
   }
 }
